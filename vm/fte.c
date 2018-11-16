@@ -16,5 +16,10 @@ bool get_frame(uint8_t *vaddr, enum palloc_flags flag, bool writable)
 		return success;
 	}
 
+	new_fte = malloc(sizeof (struct fte));
+	new_fte->owner = thread_current();
+	new_fte->frame = kpage;
+	list_push_back(&frame_table, &new_fte->ft_elem);
+
 	return success;
 }

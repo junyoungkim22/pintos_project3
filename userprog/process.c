@@ -556,6 +556,7 @@ setup_stack (void **esp)
   uint8_t *kpage;
   bool success = false;
 
+	/*
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
@@ -565,6 +566,10 @@ setup_stack (void **esp)
       else
         palloc_free_page (kpage);
     }
+	*/
+	success = get_frame(((uint8_t *) PHYS_BASE) - PGSIZE, PAL_ZERO, true);
+	if(success)
+		esp = PHYS_BASE;
   return success;
 }
 
@@ -577,13 +582,13 @@ setup_stack (void **esp)
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
+/*
 bool
 install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current ();
 
-  /* Verify that there's not already a page at that virtual
-     address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
+*/
