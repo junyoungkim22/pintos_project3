@@ -119,6 +119,7 @@ start_process (void *file_name_)
 	{
     thread_exit ();
 	}
+	hash_init(&thread_current()->sup_page_table, sup_pte_hash, sup_pte_less, NULL);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in

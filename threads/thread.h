@@ -4,7 +4,9 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <hash.h>
 #include "threads/synch.h"
+#include "vm/sup_pte.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -120,6 +122,8 @@ struct thread
 
 		struct file *exec_file;   //executable file of this process
 #endif
+
+		struct hash sup_page_table;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
