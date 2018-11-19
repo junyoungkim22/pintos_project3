@@ -104,6 +104,8 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
+	hash_init(&thread_current()->sup_page_table, sup_pte_hash, sup_pte_less, NULL);
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -119,7 +121,6 @@ start_process (void *file_name_)
 	{
     thread_exit ();
 	}
-	hash_init(&thread_current()->sup_page_table, sup_pte_hash, sup_pte_less, NULL);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -568,9 +569,10 @@ setup_stack (void **esp)
         palloc_free_page (kpage);
     }
 	*/
+	
 	success = get_frame(((uint8_t *) PHYS_BASE) - PGSIZE, PAL_ZERO, true);
 	if(success)
-		esp = PHYS_BASE;
+		*esp = PHYS_BASE;
   return success;
 }
 

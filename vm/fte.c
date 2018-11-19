@@ -7,7 +7,7 @@ bool get_frame(uint8_t *vaddr, enum palloc_flags flag, bool writable)
 	struct fte *new_fte;
 	struct sup_pte *new_sup_pte;
 
-	kpage = palloc_get_page(PAL_USER | flag);
+	kpage = palloc_get_page(PAL_USER | PAL_ZERO);
 	if(kpage == NULL){
 		return success; //did not implement eviction/allocation
 	}

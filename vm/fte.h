@@ -1,6 +1,7 @@
 #include<list.h>
 #include "threads/palloc.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 #include "userprog/pagedir.h"
 
 struct list frame_table;
