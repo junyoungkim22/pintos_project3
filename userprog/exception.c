@@ -4,7 +4,9 @@
 #include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/palloc.h"
 #include "userprog/syscall.h"
+#include "vm/fte.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -91,6 +93,7 @@ kill (struct intr_frame *f)
               thread_name (), f->vec_no, intr_name (f->vec_no));
       intr_dump_frame (f);
 			sys_exit(-1);
+			break;
 
     case SEL_KCSEG:
       /* Kernel's code segment, which indicates a kernel bug.
@@ -127,6 +130,7 @@ page_fault (struct intr_frame *f)
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
+	bool success = false;      /* True: stack growth is successful */
 
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
@@ -152,6 +156,25 @@ page_fault (struct intr_frame *f)
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
+
+	/*
+	printf("stack pointer: %p\n", f->esp);
+	printf("faulting address: %p\n", fault_addr);
+	printf("VALID?? %u\n", (unsigned) ((f->esp) - fault_addr));
+	*/
+	if((unsigned) ((f->esp) - fault_addr) <= 32)
+	{
+		//printf("VALID?? %u\n", (unsigned) ((f->esp) - fault_addr));
+		
+		void *new_upage_vaddr = pg_round_down(fault_addr);
+		success = get_frame(new_upage_vaddr, PAL_ZERO, true);
+		if(success)
+		{
+			return;
+		}
+		printf("Stack growth failed\n");
+	}
+
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
           not_present ? "not present" : "rights violation",
