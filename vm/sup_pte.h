@@ -3,7 +3,7 @@
 
 struct sup_pte
 {
-	uint32_t* vaddr;
+	uint8_t* vaddr;
 	uint64_t access_time;
 	struct hash_elem hash_elem;
 };
