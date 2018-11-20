@@ -611,6 +611,18 @@ allocate_tid (void)
 
   return tid;
 }
+
+/*Find supplemental page table entry in thread's supplemental page table*/
+struct sup_pte *
+get_sup_pte(uint8_t *vaddr)
+{
+	struct sup_pte spte;
+	struct hash_elem *e;
+
+	spte.vaddr = pg_round_down(vaddr);
+	e = hash_find(&thread_current()->sup_page_table, &spte.hash_elem);
+	return hash_entry(e, struct sup_pte, hash_elem);
+}
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */

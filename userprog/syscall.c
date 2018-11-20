@@ -19,8 +19,6 @@ bool fd_compare(const struct list_elem *e1, const struct list_elem *e2, void *au
 struct open_file *find_open_file(int fd);
 bool string_valid_vaddr(char *s);
 
-//struct lock filesys_lock;
-
 bool
 string_valid_vaddr(char *s)
 {
@@ -255,6 +253,7 @@ static bool is_valid_vaddr(const void *va)
 {
 	if(!is_user_vaddr(va))
 		return false;
+	//if(get_sup_pte(va) == NULL)
 	if(pagedir_get_page(thread_current()->pagedir, va) == NULL)
 		return false;
 	return true;

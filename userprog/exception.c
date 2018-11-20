@@ -130,6 +130,7 @@ page_fault (struct intr_frame *f)
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
+	bool is_valid_stack_addr;
 	bool success = false;      /* True: stack growth is successful */
 
   /* Obtain faulting address, the virtual address that was
@@ -157,12 +158,18 @@ page_fault (struct intr_frame *f)
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
 
+	
 	/*
 	printf("stack pointer: %p\n", f->esp);
 	printf("faulting address: %p\n", fault_addr);
 	printf("VALID?? %u\n", (unsigned) ((f->esp) - fault_addr));
+	printf("sup_page_table size: %d\n", hash_size(&thread_current()->sup_page_table));
 	*/
-	if((unsigned) ((f->esp) - fault_addr) <= 32)
+	
+	//if((unsigned) ((f->esp) - fault_addr) <= 32)
+	is_valid_stack_addr = (unsigned) fault_addr >= ((unsigned) f->esp) - 32;
+	//if((unsigned) fault_addr >= ((unsigned) f->esp) - 32)
+	if(is_valid_stack_addr && is_user_vaddr(fault_addr))
 	{
 		//printf("VALID?? %u\n", (unsigned) ((f->esp) - fault_addr));
 		

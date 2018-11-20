@@ -11,6 +11,7 @@ bool get_frame(uint8_t *vaddr, enum palloc_flags flag, bool writable)
 	if(kpage == NULL){
 		return success; //did not implement eviction/allocation
 	}
+	//printf("allocating... %p\n", vaddr);
 	success = install_page(vaddr, kpage, writable);
 	if(!success)
 	{

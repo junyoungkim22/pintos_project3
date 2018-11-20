@@ -136,6 +136,8 @@ struct open_file
 	struct file* file;
 	struct list_elem open_file_elem;
 };
+
+struct sup_pte *get_sup_pte(uint8_t *vaddr);
 #endif
 
 /* If false (default), use round-robin scheduler.
