@@ -5,6 +5,7 @@ struct sup_pte
 {
 	uint8_t* vaddr;
 	uint64_t access_time;
+	bool writable;
 	struct hash_elem hash_elem;
 };
 

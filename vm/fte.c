@@ -29,6 +29,7 @@ uint8_t *get_frame(uint8_t *vaddr, enum palloc_flags flag, bool writable)
 	new_sup_pte = malloc(sizeof (struct sup_pte));
 	new_sup_pte->vaddr = vaddr;
 	new_sup_pte->access_time = timer_ticks();
+	new_sup_pte->writable = writable;
 	hash_insert(&thread_current()->sup_page_table, &new_sup_pte->hash_elem);
 
 	return kpage;

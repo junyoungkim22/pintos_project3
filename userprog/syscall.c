@@ -122,6 +122,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 			size = (off_t) get_arg(f->esp, 3);
 			if(!string_valid_vaddr(buffer))
 				sys_exit(-1);
+			if(!get_sup_pte(buffer)->writable)
+				sys_exit(-1);
 			if(fd == 0)
 			{
 				*buffer = (char) input_getc();
@@ -216,18 +218,6 @@ syscall_handler (struct intr_frame *f UNUSED)
 			shutdown_power_off();
 			break;
 	}
-	//printf("NUM is %d\n", *((int*)f->esp));
-	/*
-	printf("NUM is %d\n", (int) get_arg(f->esp, 0));
-	if(is_valid_vaddr(get_arg(f->esp, 1)))
-	{
-		printf("valid address\n");
-		printf("String to print is %s\n", get_arg(f->esp, 1));
-	}
-	hex_dump(f->esp, f->esp, 100, true);
-  printf ("system call!\n");
-	*/
-  //thread_exit ();
 }
 
 void sys_exit(int exit_status)
