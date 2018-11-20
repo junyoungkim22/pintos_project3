@@ -621,7 +621,7 @@ get_sup_pte(uint8_t *vaddr)
 
 	spte.vaddr = pg_round_down(vaddr);
 	e = hash_find(&thread_current()->sup_page_table, &spte.hash_elem);
-	return hash_entry(e, struct sup_pte, hash_elem);
+	return e != NULL ? hash_entry(e, struct sup_pte, hash_elem) : NULL;
 }
 
 /* Offset of `stack' member within `struct thread'.

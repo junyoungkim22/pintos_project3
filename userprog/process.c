@@ -523,7 +523,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
       /* Get a page of memory. */
-      uint8_t *kpage = palloc_get_page (PAL_USER);
+      //uint8_t *kpage = palloc_get_page (PAL_USER);
+			uint8_t *kpage = get_frame(upage, 0, writable);
       if (kpage == NULL)
         return false;
 
@@ -536,11 +537,13 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
       /* Add the page to the process's address space. */
+			/*
       if (!install_page (upage, kpage, writable)) 
         {
           palloc_free_page (kpage);
           return false; 
         }
+			*/
 
       /* Advance. */
       read_bytes -= page_read_bytes;
@@ -570,10 +573,17 @@ setup_stack (void **esp)
     }
 	*/
 	
-	success = get_frame(((uint8_t *) PHYS_BASE) - PGSIZE, PAL_ZERO, true);
+	if(get_frame(((uint8_t *) PHYS_BASE) - PGSIZE, PAL_ZERO, true))
+	{
+		*esp = PHYS_BASE;
+		return true;
+	}
+	/*
 	if(success)
 		*esp = PHYS_BASE;
-  return success;
+	*/
+  //return success;
+	return false;
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel

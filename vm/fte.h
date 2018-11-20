@@ -13,4 +13,4 @@ struct fte
 	struct list_elem ft_elem;
 };
 
-bool get_frame(uint8_t *vaddr, enum palloc_flags flag, bool writable);
+uint8_t *get_frame(uint8_t *vaddr, enum palloc_flags flag, bool writable);

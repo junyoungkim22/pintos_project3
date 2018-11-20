@@ -253,8 +253,8 @@ static bool is_valid_vaddr(const void *va)
 {
 	if(!is_user_vaddr(va))
 		return false;
-	//if(get_sup_pte(va) == NULL)
-	if(pagedir_get_page(thread_current()->pagedir, va) == NULL)
+	//if(pagedir_get_page(thread_current()->pagedir, va) == NULL)
+	if(get_sup_pte(va) == NULL)
 		return false;
 	return true;
 }

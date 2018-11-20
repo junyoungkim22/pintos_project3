@@ -1,6 +1,6 @@
 #include "fte.h"
 
-bool get_frame(uint8_t *vaddr, enum palloc_flags flag, bool writable)
+uint8_t *get_frame(uint8_t *vaddr, enum palloc_flags flag, bool writable)
 {
 	uint8_t *kpage;
 	bool success = false;
@@ -9,14 +9,16 @@ bool get_frame(uint8_t *vaddr, enum palloc_flags flag, bool writable)
 
 	kpage = palloc_get_page(PAL_USER | flag);
 	if(kpage == NULL){
-		return success; //did not implement eviction/allocation
+		//return success; //did not implement eviction/allocation
+		return NULL;
 	}
 	//printf("allocating... %p\n", vaddr);
 	success = install_page(vaddr, kpage, writable);
 	if(!success)
 	{
 		palloc_free_page(kpage);
-		return success;
+		//return success;
+		return NULL;
 	}
 
 	new_fte = malloc(sizeof (struct fte));
@@ -29,5 +31,5 @@ bool get_frame(uint8_t *vaddr, enum palloc_flags flag, bool writable)
 	new_sup_pte->access_time = timer_ticks();
 	hash_insert(&thread_current()->sup_page_table, &new_sup_pte->hash_elem);
 
-	return success;
+	return kpage;
 }

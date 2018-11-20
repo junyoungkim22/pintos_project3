@@ -131,7 +131,8 @@ page_fault (struct intr_frame *f)
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
 	bool is_valid_stack_addr;
-	bool success = false;      /* True: stack growth is successful */
+	//bool success = false;      /* True: stack growth is successful */
+	uint8_t *frame_addr = NULL;
 
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
@@ -174,8 +175,8 @@ page_fault (struct intr_frame *f)
 		//printf("VALID?? %u\n", (unsigned) ((f->esp) - fault_addr));
 		
 		void *new_upage_vaddr = pg_round_down(fault_addr);
-		success = get_frame(new_upage_vaddr, PAL_ZERO, true);
-		if(success)
+		frame_addr = get_frame(new_upage_vaddr, PAL_ZERO, true);
+		if(frame_addr != NULL)
 		{
 			return;
 		}
