@@ -170,17 +170,20 @@ page_fault (struct intr_frame *f)
 	//if((unsigned) ((f->esp) - fault_addr) <= 32)
 	is_valid_stack_addr = (unsigned) fault_addr >= ((unsigned) f->esp) - 32;
 	//if((unsigned) fault_addr >= ((unsigned) f->esp) - 32)
-	if(is_valid_stack_addr && is_user_vaddr(fault_addr))
+	if(is_valid_stack_addr && is_user_vaddr(fault_addr) && fault_addr > USER_STACK_LIMIT)
 	{
 		//printf("VALID?? %u\n", (unsigned) ((f->esp) - fault_addr));
 		
 		void *new_upage_vaddr = pg_round_down(fault_addr);
-		frame_addr = get_frame(new_upage_vaddr, PAL_ZERO, true);
-		if(frame_addr != NULL)
+		if(new_upage_vaddr >= USER_STACK_LIMIT)
 		{
-			return;
+			frame_addr = get_frame(new_upage_vaddr, PAL_ZERO, true);
+			if(frame_addr != NULL)
+			{
+				return;
+			}
+			printf("Stack growth failed\n");
 		}
-		printf("Stack growth failed\n");
 	}
 
   printf ("Page fault at %p: %s error %s page in %s context.\n",

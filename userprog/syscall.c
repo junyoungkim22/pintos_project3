@@ -12,21 +12,21 @@
 #include "devices/input.h"
 
 static void syscall_handler (struct intr_frame *);
-static bool is_valid_vaddr(const void *va);
-void *get_arg(void *esp, int arg_num);
+static bool is_valid_vaddr(const void *va, struct intr_frame *f);
+void *get_arg(void *esp, int arg_num, struct intr_frame *f);
 int allocate_fd(void);
 bool fd_compare(const struct list_elem *e1, const struct list_elem *e2, void *aux);
 struct open_file *find_open_file(int fd);
-bool string_valid_vaddr(char *s);
+bool string_valid_vaddr(char *s, struct intr_frame *f);
 
 bool
-string_valid_vaddr(char *s)
+string_valid_vaddr(char *s, struct intr_frame *f)
 {
 	char *it;
 	it = s;
 	while(1)
 	{
-		if(!is_valid_vaddr(it))
+		if(!is_valid_vaddr(it, f))
 		{
 			return false;
 		}
@@ -46,7 +46,7 @@ syscall_init (void)
 }
 
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
+syscall_handler (struct intr_frame *f) 
 {
 	int syscall_num;
 	int fd;
@@ -60,12 +60,12 @@ syscall_handler (struct intr_frame *f UNUSED)
 	tid_t new_pid;  //1 to 1 mapping between tid and pid
 	tid_t child_tid;
 
-	syscall_num = (int) get_arg(f->esp, 0);
+	syscall_num = (int) get_arg(f->esp, 0, f);
 	switch(syscall_num)
 	{
 		case SYS_EXEC:	
-			name = (char*) get_arg(f->esp, 1);
-			if(!string_valid_vaddr(name))
+			name = (char*) get_arg(f->esp, 1, f);
+			if(!string_valid_vaddr(name, f))
 				sys_exit(-1);
 			lock_acquire(&filesys_lock);
 			new_pid = process_execute(name);
@@ -79,14 +79,14 @@ syscall_handler (struct intr_frame *f UNUSED)
 			f->eax = new_pid;	
 			break;
 		case SYS_WAIT:	
-			child_tid = (tid_t) get_arg(f->esp, 1);
+			child_tid = (tid_t) get_arg(f->esp, 1, f);
 			f->eax = process_wait(child_tid);
 			break;
 		case SYS_EXIT:
-			sys_exit((int) get_arg(f->esp, 1));
+			sys_exit((int) get_arg(f->esp, 1, f));
 			break;
 		case SYS_CLOSE:
-			fd = (int) get_arg(f->esp, 1);
+			fd = (int) get_arg(f->esp, 1, f);
 			open_file = find_open_file(fd);
 			if(open_file == NULL)
 				break;
@@ -97,8 +97,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 			free(open_file);
 			break;
 		case SYS_OPEN:
-			name = (char*) get_arg(f->esp, 1);
-			if(!string_valid_vaddr(name))
+			name = (char*) get_arg(f->esp, 1, f);
+			if(!string_valid_vaddr(name, f))
 				sys_exit(-1);
 			lock_acquire(&filesys_lock);
 			file_addr = filesys_open(name);
@@ -117,10 +117,10 @@ syscall_handler (struct intr_frame *f UNUSED)
 			f->eax = fd;
 			break;
 		case SYS_READ:
-			fd = (int) get_arg(f->esp, 1);
-			buffer = (char*) get_arg(f->esp, 2);
-			size = (off_t) get_arg(f->esp, 3);
-			if(!string_valid_vaddr(buffer))
+			fd = (int) get_arg(f->esp, 1, f);
+			buffer = (char*) get_arg(f->esp, 2, f);
+			size = (off_t) get_arg(f->esp, 3, f);
+			if(!string_valid_vaddr(buffer, f))
 				sys_exit(-1);
 			if(!get_sup_pte(buffer)->writable)
 				sys_exit(-1);
@@ -141,17 +141,17 @@ syscall_handler (struct intr_frame *f UNUSED)
 			lock_release(&filesys_lock);	
 			break;
 		case SYS_FILESIZE:	
-			fd = (int) get_arg(f->esp, 1);
+			fd = (int) get_arg(f->esp, 1, f);
 			open_file = find_open_file(fd);
 			lock_acquire(&filesys_lock);
 			f->eax = file_length(open_file->file);
 			lock_release(&filesys_lock);
 			break;
 		case SYS_WRITE:
-			fd = (int) get_arg(f->esp, 1);
-			buffer = (char*) get_arg(f->esp, 2);
-			size = (unsigned) get_arg(f->esp, 3);
-			if(!string_valid_vaddr(buffer))
+			fd = (int) get_arg(f->esp, 1, f);
+			buffer = (char*) get_arg(f->esp, 2, f);
+			size = (unsigned) get_arg(f->esp, 3, f);
+			if(!string_valid_vaddr(buffer, f))
 				sys_exit(-1);
 			if(fd == 1)
 			{
@@ -173,9 +173,9 @@ syscall_handler (struct intr_frame *f UNUSED)
 			lock_release(&filesys_lock);
 			break;
 		case SYS_CREATE:
-			name = (char*) get_arg(f->esp, 1);
-			size = (unsigned) get_arg(f->esp, 2);
-			if(!string_valid_vaddr(name))
+			name = (char*) get_arg(f->esp, 1, f);
+			size = (unsigned) get_arg(f->esp, 2, f);
+			if(!string_valid_vaddr(name, f))
 				sys_exit(-1);
 			lock_acquire(&filesys_lock);
 			success = filesys_create(name, size);
@@ -183,8 +183,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 			f->eax = success;
 			break;
 		case SYS_REMOVE:
-			name = (char*) get_arg(f->esp, 1);
-			if(!string_valid_vaddr(name))
+			name = (char*) get_arg(f->esp, 1, f);
+			if(!string_valid_vaddr(name, f))
 				sys_exit(-1);
 			lock_acquire(&filesys_lock);
 			success = filesys_remove(name);
@@ -192,8 +192,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 			f->eax = success;
 			break;
 		case SYS_SEEK:
-			fd = (int) get_arg(f->esp, 1);
-			new_pos = (off_t) get_arg(f->esp, 2);
+			fd = (int) get_arg(f->esp, 1, f);
+			new_pos = (off_t) get_arg(f->esp, 2, f);
 			if(fd < 2)
 				break;
 			open_file = find_open_file(fd);
@@ -204,7 +204,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 			lock_release(&filesys_lock);	
 			break;	
 		case SYS_TELL:
-			fd = (int) get_arg(f->esp, 1);
+			fd = (int) get_arg(f->esp, 1, f);
 			if(fd < 2)
 				break;
 			open_file = find_open_file(fd);
@@ -229,23 +229,37 @@ void sys_exit(int exit_status)
 	thread_exit();
 }
 
-void *get_arg(void *esp, int arg_num)
+void *get_arg(void *esp, int arg_num, struct intr_frame *f)
 {
 	void *arg_addr = (esp + (4*arg_num));
-	if(!is_valid_vaddr(arg_addr))
+	if(!is_valid_vaddr(arg_addr, f))
 		sys_exit(-1);
-	if(!is_valid_vaddr(arg_addr + 3))
+	if(!is_valid_vaddr(arg_addr + 3, f))
 		sys_exit(-1);
 	return (void*) *((int*)arg_addr);
 }
 
-static bool is_valid_vaddr(const void *va)
+static bool is_valid_vaddr(const void *va, struct intr_frame *f)
 {
-	if(!is_user_vaddr(va))
+	uint8_t *frame_addr = NULL;
+	if(!is_user_vaddr(va) || va < USER_ACCESS_LIMIT)
 		return false;
 	//if(pagedir_get_page(thread_current()->pagedir, va) == NULL)
 	if(get_sup_pte(va) == NULL)
+	{
+		if((unsigned) va >= ((unsigned) f->esp) - 32)
+		{
+			void *new_upage_vaddr = pg_round_down(va);
+			if(new_upage_vaddr < USER_STACK_LIMIT)
+				return false;
+			frame_addr = get_frame(new_upage_vaddr, NULL, true);
+			if(frame_addr != NULL)
+			{
+				return true;
+			}
+		}
 		return false;
+	}
 	return true;
 }
 
