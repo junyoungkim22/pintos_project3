@@ -114,6 +114,9 @@ main (void)
   exception_init ();
   syscall_init ();
 #endif
+	list_init(&frame_table);
+	clock_pointer = list_begin(&frame_table);
+	swap_init();
 
   /* Start thread scheduler and enable interrupts. */
   thread_start ();

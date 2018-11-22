@@ -199,12 +199,6 @@ process_exit (void)
 		lock_release(&filesys_lock);
 		free(of);
 	}
-	/*
-	for(e = list_begin(open_file_list); e != list_end(open_file_list); e = list_next(e))
-	{
-		of = list_entry(e, struct open_file, open_file_elem);
-	}
-	*/
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -524,7 +518,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
       /* Get a page of memory. */
       //uint8_t *kpage = palloc_get_page (PAL_USER);
-			uint8_t *kpage = get_frame(upage, 0, writable);
+			uint8_t *kpage = allocate_frame(upage, 0, writable);
       if (kpage == NULL)
         return false;
 
@@ -573,7 +567,7 @@ setup_stack (void **esp)
     }
 	*/
 	
-	if(get_frame(((uint8_t *) PHYS_BASE) - PGSIZE, PAL_ZERO, true))
+	if(allocate_frame(((uint8_t *) PHYS_BASE) - PGSIZE, PAL_ZERO, true))
 	{
 		*esp = PHYS_BASE;
 		return true;

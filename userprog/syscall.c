@@ -120,8 +120,15 @@ syscall_handler (struct intr_frame *f)
 			fd = (int) get_arg(f->esp, 1, f);
 			buffer = (char*) get_arg(f->esp, 2, f);
 			size = (off_t) get_arg(f->esp, 3, f);
+			for(int i = 0; i < size; i++)
+			{
+				if(!is_valid_vaddr(buffer + i, f))
+					sys_exit(-1);
+			}
+			/*
 			if(!string_valid_vaddr(buffer, f))
 				sys_exit(-1);
+			*/
 			if(!get_sup_pte(buffer)->writable)
 				sys_exit(-1);
 			if(fd == 0)
@@ -242,17 +249,20 @@ void *get_arg(void *esp, int arg_num, struct intr_frame *f)
 static bool is_valid_vaddr(const void *va, struct intr_frame *f)
 {
 	uint8_t *frame_addr = NULL;
+	struct sup_pte *found_pte;
 	if(!is_user_vaddr(va) || va < USER_ACCESS_LIMIT)
 		return false;
 	//if(pagedir_get_page(thread_current()->pagedir, va) == NULL)
-	if(get_sup_pte(va) == NULL)
+	found_pte = get_sup_pte(va);
+	//if(found_pte = get_sup_pte(va) == NULL)
+	if(found_pte == NULL)
 	{
 		if((unsigned) va >= ((unsigned) f->esp) - 32)
 		{
 			void *new_upage_vaddr = pg_round_down(va);
 			if(new_upage_vaddr < USER_STACK_LIMIT)
 				return false;
-			frame_addr = get_frame(new_upage_vaddr, NULL, true);
+			frame_addr = allocate_frame(new_upage_vaddr, NULL, true);
 			if(frame_addr != NULL)
 			{
 				return true;
@@ -260,6 +270,7 @@ static bool is_valid_vaddr(const void *va, struct intr_frame *f)
 		}
 		return false;
 	}
+	found_pte->access_time = timer_ticks();
 	return true;
 }
 

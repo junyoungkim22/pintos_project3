@@ -121,9 +121,10 @@ struct thread
 		struct child_process_info start_info;
 
 		struct file *exec_file;   //executable file of this process
-#endif
 
 		struct hash sup_page_table;
+#endif
+
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
