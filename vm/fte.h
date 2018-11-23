@@ -6,6 +6,7 @@
 
 struct list frame_table;
 struct list_elem *clock_pointer;
+struct lock frame_lock;
 
 struct fte
 {

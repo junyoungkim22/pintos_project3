@@ -2,6 +2,7 @@
 
 uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 {
+	lock_acquire(&frame_lock);
 	uint8_t *kpage;
 	bool success = false;
 	struct fte *new_fte;
@@ -37,7 +38,6 @@ uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 	new_fte = malloc(sizeof (struct fte));
 	new_fte->owner = thread_current();
 	new_fte->frame = kpage;
-	list_push_back(&frame_table, &new_fte->ft_elem);
 
 	new_sup_pte = malloc(sizeof (struct sup_pte));
 	new_sup_pte->vaddr = vaddr;
@@ -49,7 +49,9 @@ uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 	new_fte->spte = new_sup_pte;
 
 	hash_insert(&thread_current()->sup_page_table, &new_sup_pte->hash_elem);
-
+	list_push_back(&frame_table, &new_fte->ft_elem);
+	
+	lock_release(&frame_lock);
 	return kpage;
 }
 
@@ -74,6 +76,7 @@ bool evict(struct fte *fte_to_evict)
 
 bool load_sup_pte(struct sup_pte *spte)
 {
+	lock_acquire(&frame_lock);
 	uint8_t *kpage;
 	struct fte *evict_fte = fte_to_evict();
 	struct fte *new_fte;
@@ -102,9 +105,10 @@ bool load_sup_pte(struct sup_pte *spte)
 	new_fte->owner = thread_current();
 	new_fte->frame = kpage;
 	new_fte->spte = spte;
-	list_push_back(&frame_table, &new_fte->ft_elem);
 
 	spte->allocated = true;	
+	list_push_back(&frame_table, &new_fte->ft_elem);
+	lock_release(&frame_lock);
 	return true;
 }
 
