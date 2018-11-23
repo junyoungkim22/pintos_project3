@@ -159,15 +159,8 @@ process_wait (tid_t child_tid UNUSED)
 		}
 	}
 	
-	/*
-	if(found)
-		printf("child thread name: %s\n", t->name);
-	else
-		printf("not found\n");
-	*/
 	if(!found)
 		return -1;
-	//lock_acquire(&t->exit_lock);
 	sema_down(&t->exit_sema);
 	exit_status = t->exit_status;
 	list_remove(&t->child_elem);
