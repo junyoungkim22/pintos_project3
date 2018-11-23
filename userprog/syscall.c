@@ -270,6 +270,10 @@ static bool is_valid_vaddr(const void *va, struct intr_frame *f)
 		}
 		return false;
 	}
+	if(!found_pte->allocated)
+	{
+		load_sup_pte(found_pte);
+	}
 	found_pte->access_time = timer_ticks();
 	return true;
 }

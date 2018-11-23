@@ -133,6 +133,7 @@ page_fault (struct intr_frame *f)
 	bool is_valid_stack_addr;
 	//bool success = false;      /* True: stack growth is successful */
 	uint8_t *frame_addr = NULL;
+	struct sup_pte *found_pte;
 
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
@@ -160,38 +161,35 @@ page_fault (struct intr_frame *f)
      which fault_addr refers. */
 
 	
+	is_valid_stack_addr = (unsigned) fault_addr >= ((unsigned) f->esp) - 32;
+	found_pte = get_sup_pte(fault_addr);
 	/*
+	printf("Fault!\n");
 	printf("stack pointer: %p\n", f->esp);
 	printf("faulting address: %p\n", fault_addr);
-	printf("VALID?? %u\n", (unsigned) ((f->esp) - fault_addr));
-	printf("sup_page_table size: %d\n", hash_size(&thread_current()->sup_page_table));
-	*/
-	
-	//if((unsigned) ((f->esp) - fault_addr) <= 32)
-	is_valid_stack_addr = (unsigned) fault_addr >= ((unsigned) f->esp) - 32;
-	//if((unsigned) fault_addr >= ((unsigned) f->esp) - 32)
-	/*
-	printf("fault addr: %p\n", fault_addr);
-	printf("stack pointer: %p\n", f->esp);
-	if((unsigned) fault_addr != (unsigned) 0xbffeff6c)
+	if(found_pte != NULL)
 	{
-		printf("fault addr: %p\n", fault_addr);
-		lock_release(&filesys_lock);
-		printf("stack pointer: %p\n", f->esp);
-		sys_exit(-1);
+		printf("FOUND!\n");
 	}
 	*/
-	if(is_valid_stack_addr && is_user_vaddr(fault_addr) && fault_addr > USER_STACK_LIMIT)
+	//sys_exit(-1);
+	if(found_pte != NULL)
 	{
-		//printf("VALID?? %u\n", (unsigned) ((f->esp) - fault_addr));
-		
+		found_pte->access_time = timer_ticks();
+		if(!found_pte->allocated && !(!found_pte->writable && write))
+		{
+			load_sup_pte(found_pte);
+			return;
+		}
+	}	
+	else if(is_valid_stack_addr && is_user_vaddr(fault_addr) && fault_addr > USER_STACK_LIMIT)
+	{
 		void *new_upage_vaddr = pg_round_down(fault_addr);
 		if(new_upage_vaddr >= USER_STACK_LIMIT)
 		{
 			frame_addr = allocate_frame(new_upage_vaddr, PAL_ZERO, true);
 			if(frame_addr != NULL)
 			{
-				//printf("success, fault addr: %p\n", fault_addr);
 				return;
 			}
 			printf("Stack growth failed\n");

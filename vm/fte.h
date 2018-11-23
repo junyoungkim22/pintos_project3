@@ -1,5 +1,4 @@
 #include<list.h>
-#include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
@@ -19,5 +18,6 @@ struct fte
 uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable);
 
 bool evict(struct fte*);
+bool load_sup_pte(struct sup_pte*);
 struct fte *fte_to_evict(void);
 struct fte *clock_next_fte(void);

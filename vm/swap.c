@@ -1,6 +1,6 @@
 #include "vm/swap.h"
 
-void read_from_block(void *frame, int index)
+void read_from_block(void *frame, size_t index)
 {
 	for(int i = 0; i < 8; i++)
 	{
@@ -8,11 +8,27 @@ void read_from_block(void *frame, int index)
 	}
 }
 
-void write_to_block(void *frame, int index)
+void write_to_block(void *frame, size_t index)
 {
 	for(int i = 0; i < 8; i++)
 	{
 		block_write(swap_block, index + i, frame + (i * BLOCK_SECTOR_SIZE));
+	}
+}
+
+void block_reset(size_t index)
+{
+	for(int i = 0; i < 8; i++)
+	{
+		bitmap_reset(sector_bitmap, index + i);
+	}
+}
+
+void block_mark(size_t index)
+{
+	for(int i = 0; i < 8; i++)
+	{
+		bitmap_mark(sector_bitmap, index + i);
 	}
 }
 

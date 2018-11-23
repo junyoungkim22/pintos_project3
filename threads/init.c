@@ -28,6 +28,7 @@
 #include "userprog/gdt.h"
 #include "userprog/syscall.h"
 #include "userprog/tss.h"
+#include "vm/swap.h"
 #else
 #include "tests/threads/tests.h"
 #endif
@@ -114,10 +115,6 @@ main (void)
   exception_init ();
   syscall_init ();
 #endif
-	list_init(&frame_table);
-	clock_pointer = list_begin(&frame_table);
-	swap_init();
-
   /* Start thread scheduler and enable interrupts. */
   thread_start ();
   serial_init_queue ();
@@ -129,6 +126,9 @@ main (void)
   locate_block_devices ();
   filesys_init (format_filesys);
 #endif
+	list_init(&frame_table);
+	clock_pointer = list_begin(&frame_table);
+	swap_init();
 
   printf ("Boot complete.\n");
   

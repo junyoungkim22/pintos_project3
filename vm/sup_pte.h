@@ -1,5 +1,6 @@
 #include <hash.h>
 #include <debug.h>
+#include "threads/palloc.h"
 
 //Define bottom of area where user program can access via memory
 #define USER_ACCESS_LIMIT 0x08048000
@@ -11,6 +12,8 @@ struct sup_pte
 	uint64_t access_time;
 	bool writable;
 	bool allocated;
+	size_t disk_index;
+	enum palloc_flags flag;
 	struct hash_elem hash_elem;
 };
 
