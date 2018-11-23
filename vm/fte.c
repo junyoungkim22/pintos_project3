@@ -13,9 +13,21 @@ uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 		//return success; //did not implement eviction/allocation
 		printf("ran out of pages...\n\n");
 		evict_fte = fte_to_evict();
-		pagedir_clear_page(evict_fte->owner->pagedir, evict_fte->frame);
+		//write to block here!!
+		//pagedir_clear_page(evict_fte->owner->pagedir, evict_fte->frame);
+		//evict_fte->spte->allocated = false;
+		if(!evict(evict_fte))
+		{
+			printf("Eviction failed\n");
+			return NULL;
+		}
 		printf("evict fte process name: %s\n", evict_fte->owner->name);
-		return NULL;
+		kpage = palloc_get_page(PAL_USER | flag);
+		if(kpage == NULL)
+		{
+			printf("Allocation after eviction failed\n");
+			return NULL;
+		}
 	}
 	//printf("allocating... %p\n", vaddr);
 	success = install_page(vaddr, kpage, writable);
@@ -42,6 +54,19 @@ uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 	hash_insert(&thread_current()->sup_page_table, &new_sup_pte->hash_elem);
 
 	return kpage;
+}
+
+bool evict(struct fte *fte_to_evict)
+{
+	size_t index = bitmap_scan(sector_bitmap, 0, 8, false);
+	if(index == BITMAP_ERROR)
+	{
+		printf("No space in swap!\n");
+		return false;
+	}
+	write_to_block(fte_to_evict->frame, index);
+	pagedir_clear_page(fte_to_evict->owner->pagedir, fte_to_evict->frame);
+	fte_to_evict->spte->allocated = false;
 }
 
 struct fte *fte_to_evict()
