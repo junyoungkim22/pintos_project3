@@ -184,6 +184,7 @@ process_exit (void)
 	struct list *open_file_list;
 	struct list_elem *e;
 	struct open_file *of;
+	struct fte *fte_entry;
 
 	/*Allow write to executable */
 	if(cur->exec_file != NULL)
@@ -199,6 +200,36 @@ process_exit (void)
 		lock_release(&filesys_lock);
 		free(of);
 	}
+
+	lock_acquire(&frame_lock);
+	e = list_begin(&frame_table);
+	while(e != list_end(&frame_table))
+	{
+		fte_entry = list_entry(e, struct fte, ft_elem);
+		if(fte_entry->owner == cur)
+		{
+			if(fte_entry->spte->allocated == true)
+			{
+				e = list_next(e);
+				list_remove(&fte_entry->ft_elem);
+				continue;
+			}
+			else
+			{
+				block_reset(fte_entry->spte->disk_index);
+				e = list_next(e);
+				list_remove(&fte_entry->ft_elem);
+				continue;
+			}
+		}
+		e = list_next(e);
+	}
+	
+	if(clock_pointer == NULL)
+	{
+		clock_pointer = list_begin(&frame_table);
+	}
+	lock_release(&frame_lock);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

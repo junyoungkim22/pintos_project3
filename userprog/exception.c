@@ -179,6 +179,7 @@ page_fault (struct intr_frame *f)
 		if(!found_pte->allocated && !(!found_pte->writable && write))
 		{
 			load_sup_pte(found_pte);
+			//found_pte->can_evict = true;
 			return;
 		}
 	}	

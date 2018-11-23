@@ -19,12 +19,14 @@ uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 		if(!evict(evict_fte))
 		{
 			printf("Eviction failed\n");
+			//sys_exit(-1);
 			return NULL;
 		}
 		kpage = palloc_get_page(PAL_USER | flag);
 		if(kpage == NULL)
 		{
 			printf("Allocation after eviction failed\n");
+			//sys_exit(-1);
 			return NULL;
 		}
 	}
@@ -32,6 +34,8 @@ uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 	if(!success)
 	{
 		palloc_free_page(kpage);
+		printf("Installation of page failed\n");
+		//sys_exit(-1);
 		return NULL;
 	}
 
@@ -45,6 +49,7 @@ uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 	new_sup_pte->writable = writable;
 	new_sup_pte->allocated = true;
 	new_sup_pte->flag = flag;
+	new_sup_pte->can_evict = true;
 	
 	new_fte->spte = new_sup_pte;
 
@@ -76,13 +81,19 @@ bool evict(struct fte *fte_to_evict)
 
 bool load_sup_pte(struct sup_pte *spte)
 {
-	lock_acquire(&frame_lock);
 	uint8_t *kpage;
-	struct fte *evict_fte = fte_to_evict();
+	struct fte *evict_fte;
 	struct fte *new_fte;
 	bool success;
+
+	lock_acquire(&frame_lock);
+	spte->can_evict = false;
 	if(spte->allocated)
+	{
+		lock_release(&frame_lock);
 		return true;
+	}
+	evict_fte = fte_to_evict();
 	evict(evict_fte);
 	kpage = palloc_get_page(PAL_USER | spte->flag);
 	if(kpage == NULL)		
@@ -105,7 +116,7 @@ bool load_sup_pte(struct sup_pte *spte)
 	new_fte->owner = thread_current();
 	new_fte->frame = kpage;
 	new_fte->spte = spte;
-
+	
 	spte->allocated = true;	
 	list_push_back(&frame_table, &new_fte->ft_elem);
 	lock_release(&frame_lock);
@@ -119,6 +130,15 @@ struct fte *fte_to_evict()
 	for(int i = 0; i < 2*n; i++)
 	{
 		e = clock_next_fte();
+		if(!e->spte->can_evict)
+		{
+			//continue;
+		}
+		if(e->owner == NULL)
+		{
+			printf("WTF\n");
+			sys_exit(-1);
+		}
 		if(pagedir_is_accessed(e->owner->pagedir, e->spte->vaddr))
 		{
 			pagedir_set_accessed(e->owner->pagedir, e->spte->vaddr, false);

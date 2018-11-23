@@ -12,6 +12,7 @@ struct sup_pte
 	uint64_t access_time;
 	bool writable;
 	bool allocated;
+	bool can_evict;
 	size_t disk_index;
 	enum palloc_flags flag;
 	struct hash_elem hash_elem;

@@ -18,6 +18,17 @@ int allocate_fd(void);
 bool fd_compare(const struct list_elem *e1, const struct list_elem *e2, void *aux);
 struct open_file *find_open_file(int fd);
 bool string_valid_vaddr(char *s, struct intr_frame *f);
+void allow_eviction(void *s, size_t size);
+
+void
+allow_eviction(void *s, size_t size)
+{
+	for(int i = 0; i < size; i++)
+	{
+		get_sup_pte(s + i)->can_evict = true;
+	}
+	get_sup_pte(s + size)->can_evict = true;
+}
 
 bool
 string_valid_vaddr(char *s, struct intr_frame *f)
@@ -74,9 +85,11 @@ syscall_handler (struct intr_frame *f)
 			if(new_pid == TID_ERROR || !thread_current()->start_info.success)
 			{
 				f->eax = -1;
+				//allow_eviction(name, strlen(name));
 				break;
 			}
 			f->eax = new_pid;	
+			//allow_eviction(name, strlen(name));
 			break;
 		case SYS_WAIT:	
 			child_tid = (tid_t) get_arg(f->esp, 1, f);
@@ -106,6 +119,7 @@ syscall_handler (struct intr_frame *f)
 			{
 				f->eax = -1;
 				lock_release(&filesys_lock);
+				//allow_eviction(name, strlen(name));
 				break;
 			}
 			lock_release(&filesys_lock);
@@ -115,6 +129,7 @@ syscall_handler (struct intr_frame *f)
 			open_file->file = file_addr;
 			list_insert_ordered(&thread_current()->open_file_list, &open_file->open_file_elem, fd_compare, NULL);
 			f->eax = fd;
+			//allow_eviction(name, strlen(name));
 			break;
 		case SYS_READ:
 			fd = (int) get_arg(f->esp, 1, f);
@@ -135,17 +150,20 @@ syscall_handler (struct intr_frame *f)
 			{
 				*buffer = (char) input_getc();
 				f->eax = 1;
+				//allow_eviction(buffer, size);
 				break;
 			}
 			open_file = find_open_file(fd);
 			if(open_file == NULL)
 			{
 				f->eax = -1;
+				//allow_eviction(buffer, size);
 				break;
 			}
 			lock_acquire(&filesys_lock);
 			f->eax = file_read(open_file->file, buffer, size);
 			lock_release(&filesys_lock);	
+			//allow_eviction(buffer, size);
 			break;
 		case SYS_FILESIZE:	
 			fd = (int) get_arg(f->esp, 1, f);
@@ -167,17 +185,20 @@ syscall_handler (struct intr_frame *f)
 					f->eax = strlen(buffer);
 				else
 					f->eax = size;
+				//allow_eviction(buffer, size);
 				break;
 			}
 			open_file = find_open_file(fd);
 			if(open_file == NULL)
 			{
 				f->eax = -1;
+				//allow_eviction(buffer, size);
 				break;
 			}
 			lock_acquire(&filesys_lock);
 			f->eax = file_write(open_file->file, buffer, size);
 			lock_release(&filesys_lock);
+			//allow_eviction(buffer, size);
 			break;
 		case SYS_CREATE:
 			name = (char*) get_arg(f->esp, 1, f);
@@ -188,6 +209,7 @@ syscall_handler (struct intr_frame *f)
 			success = filesys_create(name, size);
 			lock_release(&filesys_lock);
 			f->eax = success;
+			//allow_eviction(name, strlen(name));
 			break;
 		case SYS_REMOVE:
 			name = (char*) get_arg(f->esp, 1, f);
@@ -197,6 +219,7 @@ syscall_handler (struct intr_frame *f)
 			success = filesys_remove(name);
 			lock_release(&filesys_lock);
 			f->eax = success;
+			//allow_eviction(name, strlen(name));
 			break;
 		case SYS_SEEK:
 			fd = (int) get_arg(f->esp, 1, f);
@@ -270,10 +293,9 @@ static bool is_valid_vaddr(const void *va, struct intr_frame *f)
 		}
 		return false;
 	}
-	if(!found_pte->allocated)
-	{
-		load_sup_pte(found_pte);
-	}
+	//if(!found_pte->allocated)
+	load_sup_pte(found_pte);
+	//found_pte->can_evict = true;
 	found_pte->access_time = timer_ticks();
 	return true;
 }
