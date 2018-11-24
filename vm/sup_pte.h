@@ -13,6 +13,7 @@ struct sup_pte
 	bool writable;
 	bool allocated;
 	bool can_evict;
+	bool is_mmap;
 	size_t disk_index;
 	enum palloc_flags flag;
 	struct hash_elem hash_elem;

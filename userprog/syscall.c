@@ -19,6 +19,7 @@ bool fd_compare(const struct list_elem *e1, const struct list_elem *e2, void *au
 struct open_file *find_open_file(int fd);
 bool string_valid_vaddr(char *s, struct intr_frame *f);
 void allow_eviction(void *s, size_t size);
+bool sys_mmap(struct intr_frame *f);
 
 void
 allow_eviction(void *s, size_t size)
@@ -56,6 +57,68 @@ syscall_init (void)
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+bool sys_mmap(struct intr_frame *f)
+{
+	int fd;
+	void *map_vaddr;
+	struct open_file *open_file;
+	struct mmap_info *new_mmap_info;
+	struct sup_pte *new_spte;
+	bool stack_overlap;
+	size_t file_size;
+
+	fd = (int) get_arg(f->esp, 1, f);
+	map_vaddr = (void*) get_arg(f->esp, 2, f);
+	open_file = find_open_file(fd);
+	if(open_file == NULL)
+		return false;
+	if(pg_round_down(map_vaddr) != map_vaddr)
+		return false;
+	lock_acquire(&filesys_lock);
+	stack_overlap = (unsigned) pg_round_up((map_vaddr + file_length(open_file->file))) >= f->esp;	
+	if(map_vaddr < USER_STACK_LIMIT || stack_overlap)
+	{
+		lock_release(&filesys_lock);
+		return false;
+	}
+	/*
+	printf("%u\n", map_vaddr + file_length(open_file->file));
+	printf("%u\n", f->esp);
+	printf("WHY?\n");
+	lock_release(&filesys_lock);
+	sys_exit(-20);
+	*/
+	file_size = file_length(open_file->file);
+	while(file_size > 0)
+	{
+		new_spte = malloc(sizeof (struct sup_pte));
+		new_spte->vaddr = map_vaddr;
+		new_spte->writable = true;
+		new_spte->allocated = false;
+		new_spte->can_evict = false;
+		new_spte->is_mmap = true;
+		hash_insert(&thread_current()->sup_page_table, &new_spte->hash_elem);
+
+		new_mmap_info = malloc(sizeof (struct mmap_info));	
+		if(file_size >= PGSIZE)
+		{
+			new_mmap_info->size = PGSIZE;
+			map_vaddr += PGSIZE;
+		}
+		else
+			new_mmap_info->size = file_size;
+		file_size -= new_mmap_info->size;
+
+		new_mmap_info->mmap_file = open_file->file;
+		new_mmap_info->mapid = thread_current()->mapid_counter;
+		new_mmap_info->spte = new_spte;
+		list_insert(&thread_current()->mmap_list, &new_mmap_info->mmap_list_elem);
+
+	}
+	lock_release(&filesys_lock);
+	return true;
+}
+
 static void
 syscall_handler (struct intr_frame *f) 
 {
@@ -74,6 +137,16 @@ syscall_handler (struct intr_frame *f)
 	syscall_num = (int) get_arg(f->esp, 0, f);
 	switch(syscall_num)
 	{
+		case SYS_MMAP:
+			if(!sys_mmap(f))
+			{
+				f->eax = -1;
+				break;
+			}
+			f->eax = thread_current()->mapid_counter++;
+			break;
+		case SYS_MUNMAP:
+			break;
 		case SYS_EXEC:	
 			name = (char*) get_arg(f->esp, 1, f);
 			if(!string_valid_vaddr(name, f))

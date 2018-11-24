@@ -112,6 +112,12 @@ bool load_sup_pte(struct sup_pte *spte)
 	if(!success)
 	{
 		palloc_free_page(kpage);
+		lock_release(&frame_lock);
+		/*
+		printf("FAIL\n");
+		lock_release(&frame_lock);
+		sys_exit(-2);
+		*/
 		return success;
 	}
 

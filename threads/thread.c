@@ -492,6 +492,8 @@ init_thread (struct thread *t, const char *name, int priority)
 	sema_init(&t->exit_sema, 0);
 	sema_init(&t->exit_sema2, 0);
 	sema_init(&t->start_info.start_sema, 0);
+	list_init(&t->mmap_list);
+	t->mapid_counter = 1;
 #endif
 
   old_level = intr_disable ();

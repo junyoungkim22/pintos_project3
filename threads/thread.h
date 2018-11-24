@@ -123,14 +123,26 @@ struct thread
 		struct file *exec_file;   //executable file of this process
 
 		struct hash sup_page_table;
-#endif
 
+		int mapid_counter;
+		struct list mmap_list;
+#endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
 
 #ifdef USERPROG
+/* Struct to keep track of memory mapped files */
+struct mmap_info
+{
+	struct sup_pte *spte;
+	size_t size;
+	struct file *mmap_file;
+	int mapid;
+	struct list_elem mmap_list_elem;
+};
+
 struct open_file
 {
 	int fd;
