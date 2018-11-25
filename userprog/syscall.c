@@ -19,6 +19,7 @@ struct open_file *find_open_file(int fd);
 bool string_valid_vaddr(char *s, struct intr_frame *f);
 void allow_eviction(void *s, size_t size);
 bool sys_mmap(struct intr_frame *f);
+bool page_overlap(void *vaddr, size_t size);
 
 void
 allow_eviction(void *s, size_t size)
@@ -64,6 +65,7 @@ bool sys_mmap(struct intr_frame *f)
 	struct mmap_info *new_mmap_info;
 	struct sup_pte *new_spte;
 	bool stack_overlap;
+	bool is_page_overlap;
 	size_t file_index;
 	size_t file_size;
 
@@ -71,23 +73,30 @@ bool sys_mmap(struct intr_frame *f)
 	map_vaddr = (void*) get_arg(f->esp, 2, f);
 	open_file = find_open_file(fd);
 	if(open_file == NULL)
+	{
 		return false;
-	if(pg_round_down(map_vaddr) != map_vaddr)
-		return false;
+	}
 	lock_acquire(&filesys_lock);
-	stack_overlap = (unsigned) pg_round_up((map_vaddr + file_length(open_file->file))) >= f->esp;	
-	if(map_vaddr < USER_STACK_LIMIT || stack_overlap)
+	if(file_length(open_file->file) == 0)
 	{
 		lock_release(&filesys_lock);
 		return false;
 	}
-	/*
-	printf("%u\n", map_vaddr + file_length(open_file->file));
-	printf("%u\n", f->esp);
-	printf("WHY?\n");
 	lock_release(&filesys_lock);
-	sys_exit(-20);
-	*/
+	if(pg_round_down(map_vaddr) != map_vaddr)
+	{
+		return false;
+	}
+	lock_acquire(&filesys_lock);
+	is_page_overlap = page_overlap(map_vaddr, file_length(open_file->file));
+	//if(map_vaddr < USER_STACK_LIMIT || stack_overlap)
+
+	if(is_page_overlap || stack_overlap || map_vaddr == NULL)
+	{
+		lock_release(&filesys_lock);
+		return false;
+	}
+
 	file_index = 0;
 	file_size = file_length(open_file->file);
 	while(file_size > 0)
@@ -96,7 +105,7 @@ bool sys_mmap(struct intr_frame *f)
 		new_spte->vaddr = map_vaddr;
 		new_spte->writable = true;
 		new_spte->allocated = false;
-		new_spte->can_evict = false;
+		new_spte->can_evict = true;
 		new_spte->is_mmap = true;
 		hash_insert(&thread_current()->sup_page_table, &new_spte->hash_elem);
 
@@ -114,11 +123,24 @@ bool sys_mmap(struct intr_frame *f)
 		new_mmap_info->mapid = thread_current()->mapid_counter;
 		new_mmap_info->spte = new_spte;
 		new_mmap_info->file_index = file_index;
-		list_insert(&thread_current()->mmap_list, &new_mmap_info->mmap_list_elem);
+		list_push_back(&thread_current()->mmap_list, &new_mmap_info->mmap_list_elem);
 		file_index += PGSIZE;
 	}
 	lock_release(&filesys_lock);
 	return true;
+}
+
+bool page_overlap(void *vaddr, size_t size)
+{
+	for(void *p = vaddr; (unsigned) p <= pg_round_up(vaddr + size); p += PGSIZE)
+	{
+		if(get_sup_pte(p) != NULL)
+		{
+			//sys_exit(-1);
+			return true;
+		}
+	}
+	return false;
 }
 
 static void
@@ -367,7 +389,7 @@ static bool is_valid_vaddr(const void *va, struct intr_frame *f)
 		return false;
 	}
 	load_sup_pte(found_pte);
-	found_pte->can_evict = false;
+	//found_pte->can_evict = false;
 	found_pte->access_time = timer_ticks();
 	return true;
 }

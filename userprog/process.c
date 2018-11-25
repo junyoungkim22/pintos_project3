@@ -180,8 +180,10 @@ process_exit (void)
 	struct fte *fte_entry;
 
 	/*Allow write to executable */
+	lock_acquire(&filesys_lock);
 	if(cur->exec_file != NULL)
 		file_close(cur->exec_file);
+	lock_release(&filesys_lock);
 
 	open_file_list = &cur->open_file_list;
 	while(!list_empty(open_file_list))
@@ -194,6 +196,11 @@ process_exit (void)
 		free(of);
 	}
 
+	if(lock_held_by_current_thread(&frame_lock))
+	{
+		printf("uh oh\n");
+		lock_release(&frame_lock);
+	}
 	lock_acquire(&frame_lock);
 	e = list_begin(&frame_table);
 	while(e != list_end(&frame_table))
@@ -218,10 +225,12 @@ process_exit (void)
 		e = list_next(e);
 	}
 	
+	/*
 	if(clock_pointer == NULL)
 	{
 		clock_pointer = list_begin(&frame_table);
 	}
+	*/
 	lock_release(&frame_lock);
 
   /* Destroy the current process's page directory and switch back

@@ -626,6 +626,15 @@ get_sup_pte(void *vaddr)
 struct mmap_info *
 get_mmap_info(void *vaddr)
 {
+	struct list_elem *e;
+	struct mmap_info *m;
+	struct list *mmap_list = &thread_current()->mmap_list;
+	for(e = list_begin(mmap_list); e != list_end(mmap_list); e = list_next(e))
+	{
+		m = list_entry(e, struct mmap_info, mmap_list_elem);
+		if(m->spte->vaddr == vaddr)
+			return m;
+	}
 	return NULL;
 }
 

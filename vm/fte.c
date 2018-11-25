@@ -2,6 +2,12 @@
 
 uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 {
+	if(lock_held_by_current_thread(&frame_lock))
+	{
+		printf("1");
+		lock_release(&frame_lock);
+		sys_exit(-1);
+	}
 	lock_acquire(&frame_lock);
 	uint8_t *kpage;
 	bool success = false;
@@ -53,6 +59,7 @@ uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 	new_sup_pte->allocated = true;
 	new_sup_pte->flag = flag;
 	new_sup_pte->can_evict = true;
+	new_sup_pte->is_mmap = false;
 	
 	new_fte->spte = new_sup_pte;
 
@@ -87,13 +94,32 @@ bool load_mmap(struct sup_pte *spte)
 	uint8_t *kpage;
 	struct fte *evict_fte;
 	struct fte *new_fte;
+	struct mmap_info *spte_mmap_info;
+	struct file *mmap_file;
 	bool success;
 
+	if(lock_held_by_current_thread(&frame_lock))
+	{
+		printf("2");
+		lock_release(&frame_lock);
+		sys_exit(-1);
+	}
 	lock_acquire(&frame_lock);
 	if(spte->allocated)
 	{
 		lock_release(&frame_lock);
 		return true;
+	}
+	spte_mmap_info = get_mmap_info(spte->vaddr);
+	if(spte_mmap_info == NULL)
+	{
+		lock_release(&frame_lock);
+		return false;
+	}
+	if(spte_mmap_info->size == 0)
+	{
+		lock_release(&frame_lock);
+		sys_exit(-1);
 	}
 	kpage = palloc_get_page(PAL_USER | PAL_ZERO);
 	if(kpage == NULL){
@@ -127,7 +153,11 @@ bool load_mmap(struct sup_pte *spte)
 		sys_exit(-1);
 		return NULL;
 	}
+
 	lock_acquire(&filesys_lock);
+	mmap_file = file_reopen(spte_mmap_info->mmap_file);
+	file_read_at(mmap_file, kpage, spte_mmap_info->size, spte_mmap_info->file_index);
+	file_close(mmap_file);
 	lock_release(&filesys_lock);
 
 	lock_release(&frame_lock);
@@ -140,8 +170,14 @@ bool load_sup_pte(struct sup_pte *spte)
 	struct fte *new_fte;
 	bool success;
 
+	if(lock_held_by_current_thread(&frame_lock))
+	{
+		printf("3");
+		lock_release(&frame_lock);
+		sys_exit(-1);
+	}
 	lock_acquire(&frame_lock);
-	spte->can_evict = true;
+	spte->can_evict = false;
 	if(spte->allocated)
 	{
 		lock_release(&frame_lock);

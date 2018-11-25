@@ -172,18 +172,19 @@ page_fault (struct intr_frame *f)
 		printf("FOUND!\n");
 	}
 	*/
-	//sys_exit(-1);
+	
 	if(found_pte != NULL)
 	{
 		found_pte->access_time = timer_ticks();
 		if(found_pte->is_mmap)
 		{
-			
+			load_mmap(found_pte);
+			return;
 		}
 		if(!found_pte->allocated && !(!found_pte->writable && write))
 		{
 			load_sup_pte(found_pte);
-			//found_pte->can_evict = true;
+			found_pte->can_evict = true;
 			return;
 		}
 	}	
