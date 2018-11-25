@@ -155,9 +155,10 @@ bool load_mmap(struct sup_pte *spte)
 	}
 
 	lock_acquire(&filesys_lock);
-	mmap_file = file_reopen(spte_mmap_info->mmap_file);
+	//mmap_file = file_reopen(spte_mmap_info->mmap_file);
+	mmap_file = spte_mmap_info->mmap_file;
 	file_read_at(mmap_file, kpage, spte_mmap_info->size, spte_mmap_info->file_index);
-	file_close(mmap_file);
+	//file_close(mmap_file);
 	lock_release(&filesys_lock);
 
 	lock_release(&frame_lock);

@@ -64,6 +64,7 @@ bool sys_mmap(struct intr_frame *f)
 	struct open_file *open_file;
 	struct mmap_info *new_mmap_info;
 	struct sup_pte *new_spte;
+	struct file *mmap_file;
 	bool stack_overlap;
 	bool is_page_overlap;
 	size_t file_index;
@@ -99,6 +100,7 @@ bool sys_mmap(struct intr_frame *f)
 
 	file_index = 0;
 	file_size = file_length(open_file->file);
+	mmap_file = file_reopen(open_file->file);
 	while(file_size > 0)
 	{
 		new_spte = malloc(sizeof (struct sup_pte));
@@ -119,7 +121,8 @@ bool sys_mmap(struct intr_frame *f)
 			new_mmap_info->size = file_size;
 		file_size -= new_mmap_info->size;
 
-		new_mmap_info->mmap_file = open_file->file;
+		//new_mmap_info->mmap_file = open_file->file;
+		new_mmap_info->mmap_file = mmap_file;
 		new_mmap_info->mapid = thread_current()->mapid_counter;
 		new_mmap_info->spte = new_spte;
 		new_mmap_info->file_index = file_index;
