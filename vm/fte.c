@@ -82,6 +82,57 @@ bool evict(struct fte *fte_to_evict)
 	return true;
 }
 
+bool load_mmap(struct sup_pte *spte)
+{
+	uint8_t *kpage;
+	struct fte *evict_fte;
+	struct fte *new_fte;
+	bool success;
+
+	lock_acquire(&frame_lock);
+	if(spte->allocated)
+	{
+		lock_release(&frame_lock);
+		return true;
+	}
+	kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+	if(kpage == NULL){
+		evict_fte = fte_to_evict();
+		/*
+		printf("evicting vaddr: %p\n", evict_fte->spte->vaddr);
+		printf("new vaddr: %p\n", vaddr);
+		*/
+		if(!evict(evict_fte))
+		{
+			printf("Eviction failed\n");
+			lock_release(&frame_lock);
+			sys_exit(-1);
+			return NULL;
+		}
+		kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+		if(kpage == NULL)
+		{
+			printf("Allocation after eviction failed\n");
+			lock_release(&frame_lock);
+			sys_exit(-1);
+			return NULL;
+		}
+	}
+	success = install_page(spte->vaddr, kpage, true);
+	if(!success)
+	{
+		palloc_free_page(kpage);
+		printf("Installation of page failed\n");
+		lock_release(&frame_lock);
+		sys_exit(-1);
+		return NULL;
+	}
+	lock_acquire(&filesys_lock);
+	lock_release(&filesys_lock);
+
+	lock_release(&frame_lock);
+}
+
 bool load_sup_pte(struct sup_pte *spte)
 {
 	uint8_t *kpage;
@@ -102,6 +153,7 @@ bool load_sup_pte(struct sup_pte *spte)
 	if(kpage == NULL)		
 	{
 		printf("Allocation after eviction failed\n");
+		lock_release(&frame_lock);
 		return false;
 	}
 
@@ -183,6 +235,7 @@ struct fte *fte_to_evict()
 	return NULL;
 }
 
+/*
 struct fte *clock_next_fte()
 {
 	struct fte *ret;
@@ -199,3 +252,4 @@ struct fte *clock_next_fte()
 	clock_pointer = list_next(clock_pointer);
 	return ret;
 }
+*/

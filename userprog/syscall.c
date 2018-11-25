@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
-#include "threads/thread.h"
 #include "threads/synch.h"
 #include "lib/string.h"
 #include "lib/kernel/list.h"
@@ -65,6 +64,7 @@ bool sys_mmap(struct intr_frame *f)
 	struct mmap_info *new_mmap_info;
 	struct sup_pte *new_spte;
 	bool stack_overlap;
+	size_t file_index;
 	size_t file_size;
 
 	fd = (int) get_arg(f->esp, 1, f);
@@ -88,6 +88,7 @@ bool sys_mmap(struct intr_frame *f)
 	lock_release(&filesys_lock);
 	sys_exit(-20);
 	*/
+	file_index = 0;
 	file_size = file_length(open_file->file);
 	while(file_size > 0)
 	{
@@ -112,8 +113,9 @@ bool sys_mmap(struct intr_frame *f)
 		new_mmap_info->mmap_file = open_file->file;
 		new_mmap_info->mapid = thread_current()->mapid_counter;
 		new_mmap_info->spte = new_spte;
+		new_mmap_info->file_index = file_index;
 		list_insert(&thread_current()->mmap_list, &new_mmap_info->mmap_list_elem);
-
+		file_index += PGSIZE;
 	}
 	lock_release(&filesys_lock);
 	return true;

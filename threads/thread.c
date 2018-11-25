@@ -613,7 +613,7 @@ allocate_tid (void)
 
 /*Find supplemental page table entry in thread's supplemental page table*/
 struct sup_pte *
-get_sup_pte(uint8_t *vaddr)
+get_sup_pte(void *vaddr)
 {
 	struct sup_pte spte;
 	struct hash_elem *e;
@@ -621,6 +621,12 @@ get_sup_pte(uint8_t *vaddr)
 	spte.vaddr = pg_round_down(vaddr);
 	e = hash_find(&thread_current()->sup_page_table, &spte.hash_elem);
 	return e != NULL ? hash_entry(e, struct sup_pte, hash_elem) : NULL;
+}
+
+struct mmap_info *
+get_mmap_info(void *vaddr)
+{
+	return NULL;
 }
 
 /* Offset of `stack' member within `struct thread'.

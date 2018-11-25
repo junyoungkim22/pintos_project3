@@ -138,6 +138,7 @@ struct mmap_info
 {
 	struct sup_pte *spte;
 	size_t size;
+	size_t file_index;
 	struct file *mmap_file;
 	int mapid;
 	struct list_elem mmap_list_elem;
@@ -150,7 +151,8 @@ struct open_file
 	struct list_elem open_file_elem;
 };
 
-struct sup_pte *get_sup_pte(uint8_t *vaddr);
+struct sup_pte *get_sup_pte(void *vaddr);
+struct mmap_info *get_mmap_info(void *vaddr);
 #endif
 
 /* If false (default), use round-robin scheduler.

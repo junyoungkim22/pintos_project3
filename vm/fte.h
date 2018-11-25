@@ -20,5 +20,6 @@ uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable);
 
 bool evict(struct fte*);
 bool load_sup_pte(struct sup_pte*);
+bool load_mmap(struct sup_pte*);
 struct fte *fte_to_evict(void);
 struct fte *clock_next_fte(void);

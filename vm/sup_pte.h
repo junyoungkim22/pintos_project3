@@ -1,10 +1,13 @@
 #include <hash.h>
 #include <debug.h>
 #include "threads/palloc.h"
+#include "threads/synch.h"
 
 //Define bottom of area where user program can access via memory
 #define USER_ACCESS_LIMIT 0x08048000
 #define USER_STACK_LIMIT PHYS_BASE-(1<<23)
+
+struct lock filesys_lock;
 
 struct sup_pte
 {

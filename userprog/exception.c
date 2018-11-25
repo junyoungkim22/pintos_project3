@@ -176,6 +176,10 @@ page_fault (struct intr_frame *f)
 	if(found_pte != NULL)
 	{
 		found_pte->access_time = timer_ticks();
+		if(found_pte->is_mmap)
+		{
+			
+		}
 		if(!found_pte->allocated && !(!found_pte->writable && write))
 		{
 			load_sup_pte(found_pte);
