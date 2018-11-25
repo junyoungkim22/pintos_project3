@@ -6,7 +6,7 @@
 
 struct list frame_table;
 struct list_elem *clock_pointer;
-struct lock frame_lock;
+//struct lock frame_lock;
 
 struct fte
 {
@@ -22,4 +22,4 @@ bool evict(struct fte*);
 bool load_sup_pte(struct sup_pte*);
 bool load_mmap(struct sup_pte*);
 struct fte *fte_to_evict(void);
-struct fte *clock_next_fte(void);
+struct fte* fte_search(void *vaddr);

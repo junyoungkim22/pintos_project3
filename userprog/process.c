@@ -208,6 +208,13 @@ process_exit (void)
 		fte_entry = list_entry(e, struct fte, ft_elem);
 		if(fte_entry->owner == cur)
 		{
+			if(fte_entry->spte->is_mmap)
+			{
+				//shutdown_power_off();
+				e = list_next(e);
+				evict(fte_entry);
+				continue;
+			}
 			if(fte_entry->spte->allocated == true)
 			{
 				e = list_next(e);

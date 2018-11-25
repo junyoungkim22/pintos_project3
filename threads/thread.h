@@ -24,6 +24,8 @@ struct child_process_info
 	bool success;
 	struct semaphore start_sema;
 };
+
+struct lock frame_lock;
 #endif
 
 /* Thread identifier type.

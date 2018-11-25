@@ -72,17 +72,31 @@ uint8_t *allocate_frame(void *vaddr, enum palloc_flags flag, bool writable)
 
 bool evict(struct fte *fte_to_evict)
 {
-	size_t index = bitmap_scan(sector_bitmap, 0, 8, false);
-	if(index == BITMAP_ERROR)
+	size_t index;
+	struct file *mmap_file;
+	struct mmap_info *spte_mmap_info;
+	if(fte_to_evict->spte->is_mmap && pagedir_is_dirty(thread_current()->pagedir, fte_to_evict->spte->vaddr))
 	{
-		printf("No space in swap!\n");
-		return false;
+		lock_acquire(&filesys_lock);
+		spte_mmap_info = get_mmap_info(fte_to_evict->spte->vaddr);
+		mmap_file = spte_mmap_info->mmap_file;
+		file_write_at(mmap_file, fte_to_evict->frame, spte_mmap_info->size, spte_mmap_info->file_index);
+		lock_release(&filesys_lock);
 	}
-	write_to_block(fte_to_evict->frame, index);
-	block_mark(index);
+	else 
+	{
+		index= bitmap_scan(sector_bitmap, 0, 8, false);
+		if(index == BITMAP_ERROR)
+		{
+			printf("No space in swap!\n");
+			return false;
+		}
+		write_to_block(fte_to_evict->frame, index);
+		block_mark(index);
+		fte_to_evict->spte->disk_index = index;
+	}
 	pagedir_clear_page(fte_to_evict->owner->pagedir, fte_to_evict->spte->vaddr);
 	palloc_free_page(fte_to_evict->frame);
-	fte_to_evict->spte->disk_index = index;
 	fte_to_evict->spte->allocated = false;
 	list_remove(&fte_to_evict->ft_elem);
 	free(fte_to_evict);
@@ -96,6 +110,7 @@ bool load_mmap(struct sup_pte *spte)
 	struct fte *new_fte;
 	struct mmap_info *spte_mmap_info;
 	struct file *mmap_file;
+	size_t read_bytes;
 	bool success;
 
 	if(lock_held_by_current_thread(&frame_lock))
@@ -155,11 +170,18 @@ bool load_mmap(struct sup_pte *spte)
 	}
 
 	lock_acquire(&filesys_lock);
-	//mmap_file = file_reopen(spte_mmap_info->mmap_file);
 	mmap_file = spte_mmap_info->mmap_file;
-	file_read_at(mmap_file, kpage, spte_mmap_info->size, spte_mmap_info->file_index);
-	//file_close(mmap_file);
+	read_bytes = spte_mmap_info->size;
+	file_read_at(mmap_file, kpage, read_bytes, spte_mmap_info->file_index);
+	memset(kpage + read_bytes, 0, PGSIZE - read_bytes);
 	lock_release(&filesys_lock);
+
+	spte->allocated = true;	
+	new_fte = malloc(sizeof (struct fte));
+	new_fte->owner = thread_current();
+	new_fte->frame = kpage;
+	new_fte->spte = spte;
+	list_push_back(&frame_table, &new_fte->ft_elem);
 
 	lock_release(&frame_lock);
 }
@@ -202,11 +224,6 @@ bool load_sup_pte(struct sup_pte *spte)
 	{
 		palloc_free_page(kpage);
 		lock_release(&frame_lock);
-		/*
-		printf("FAIL\n");
-		lock_release(&frame_lock);
-		sys_exit(-2);
-		*/
 		return success;
 	}
 
@@ -225,27 +242,6 @@ struct fte *fte_to_evict()
 {
 	int n = list_size(&frame_table);
 	struct fte *e;
-	/*
-	for(int i = 0; i < 2*n; i++)
-	{
-		e = clock_next_fte();
-		if(!e->spte->can_evict)
-		{
-			continue;
-		}
-		if(e->owner == NULL)
-		{
-			printf("WTF\n");
-			sys_exit(-1);
-		}
-		if(pagedir_is_accessed(e->owner->pagedir, e->spte->vaddr))
-		{
-			pagedir_set_accessed(e->owner->pagedir, e->spte->vaddr, false);
-			continue;
-		}
-		return e;
-	}
-	*/
 	struct list_elem *it;
 	it = list_begin(&frame_table);
 	for(int i = 0; i < 2 * (list_size(&frame_table)); i++)
@@ -272,21 +268,17 @@ struct fte *fte_to_evict()
 	return NULL;
 }
 
-/*
-struct fte *clock_next_fte()
+struct fte *fte_search(void *vaddr)
 {
-	struct fte *ret;
-	if(list_empty(&frame_table))
+	//lock_acquire(&frame_lock);
+	struct list_elem *e;
+	struct fte *found_fte;
+	for(e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
 	{
-		printf("List is empty\n");
-		return NULL;
+		found_fte = list_entry(e, struct fte, ft_elem);
+		if(found_fte->spte->vaddr == vaddr)
+			return found_fte;
 	}
-	if(clock_pointer == list_end(&frame_table))
-	{
-		clock_pointer = list_begin(&frame_table);
-	}
-	ret = list_entry(clock_pointer, struct fte, ft_elem);
-	clock_pointer = list_next(clock_pointer);
-	return ret;
+	//lock_release(&frame_lock);
+	return NULL;
 }
-*/

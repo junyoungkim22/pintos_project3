@@ -20,35 +20,7 @@ bool string_valid_vaddr(char *s, struct intr_frame *f);
 void allow_eviction(void *s, size_t size);
 bool sys_mmap(struct intr_frame *f);
 bool page_overlap(void *vaddr, size_t size);
-
-void
-allow_eviction(void *s, size_t size)
-{
-	for(int i = 0; i < size; i++)
-	{
-		get_sup_pte(s + i)->can_evict = true;
-	}
-	get_sup_pte(s + size)->can_evict = true;
-}
-
-bool
-string_valid_vaddr(char *s, struct intr_frame *f)
-{
-	char *it;
-	it = s;
-	while(1)
-	{
-		if(!is_valid_vaddr(it, f))
-		{
-			return false;
-		}
-		if(*it == NULL)
-		{
-			return true;
-		}
-		it++;
-	}
-}
+void sys_munmap(int mapid);
 
 void
 syscall_init (void) 
@@ -146,6 +118,39 @@ bool page_overlap(void *vaddr, size_t size)
 	return false;
 }
 
+void sys_munmap(int mapid)
+{
+	struct list_elem *e;
+	struct mmap_info *minfo;
+	struct fte *mmap_fte;
+	e = list_begin(&thread_current()->mmap_list);
+	while(e != list_end(&thread_current()->mmap_list))
+	{
+		minfo = list_entry(e, struct mmap_info, mmap_list_elem);
+		if(minfo->mapid == mapid)
+		{
+			lock_acquire(&frame_lock);
+			if(minfo->spte->allocated)
+			{
+				mmap_fte = fte_search(pg_round_down(minfo->spte->vaddr));
+				if(mmap_fte == NULL)
+				{
+				}
+				evict(mmap_fte);
+			}
+			hash_delete(&thread_current()->sup_page_table, &minfo->spte->hash_elem);
+			lock_release(&frame_lock);
+			lock_acquire(&filesys_lock);
+			file_close(minfo->mmap_file);
+			lock_release(&filesys_lock);
+			free(minfo->spte);
+		}
+		e = list_next(e);
+		list_remove(&minfo->mmap_list_elem);
+		free(minfo);
+	}
+}
+
 static void
 syscall_handler (struct intr_frame *f) 
 {
@@ -173,6 +178,7 @@ syscall_handler (struct intr_frame *f)
 			f->eax = thread_current()->mapid_counter++;
 			break;
 		case SYS_MUNMAP:
+			sys_munmap((int) get_arg(f->esp, 1, f));			
 			break;
 		case SYS_EXEC:	
 			name = (char*) get_arg(f->esp, 1, f);
@@ -437,4 +443,33 @@ bool fd_compare(const struct list_elem *e1, const struct list_elem *e2, void *au
 	of1 = list_entry(e1, struct open_file, open_file_elem);
 	of2 = list_entry(e2, struct open_file, open_file_elem);
 	return of1->fd < of2->fd;
+}
+
+void
+allow_eviction(void *s, size_t size)
+{
+	for(int i = 0; i < size; i++)
+	{
+		get_sup_pte(s + i)->can_evict = true;
+	}
+	get_sup_pte(s + size)->can_evict = true;
+}
+
+bool
+string_valid_vaddr(char *s, struct intr_frame *f)
+{
+	char *it;
+	it = s;
+	while(1)
+	{
+		if(!is_valid_vaddr(it, f))
+		{
+			return false;
+		}
+		if(*it == NULL)
+		{
+			return true;
+		}
+		it++;
+	}
 }
