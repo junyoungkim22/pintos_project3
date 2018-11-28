@@ -12,7 +12,6 @@ struct lock filesys_lock;
 struct sup_pte
 {
 	uint8_t* vaddr;
-	uint64_t access_time;
 	bool writable;
 	bool allocated;
 	bool can_evict;

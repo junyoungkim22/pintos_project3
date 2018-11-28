@@ -131,7 +131,6 @@ page_fault (struct intr_frame *f)
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
 	bool is_valid_stack_addr;
-	//bool success = false;      /* True: stack growth is successful */
 	uint8_t *frame_addr = NULL;
 	struct sup_pte *found_pte;
 
@@ -163,15 +162,6 @@ page_fault (struct intr_frame *f)
 	
 	is_valid_stack_addr = (unsigned) fault_addr >= ((unsigned) f->esp) - 32;
 	found_pte = get_sup_pte(fault_addr);
-	/*
-	printf("Fault!\n");
-	printf("stack pointer: %p\n", f->esp);
-	printf("faulting address: %p\n", fault_addr);
-	if(found_pte != NULL)
-	{
-		printf("FOUND!\n");
-	}
-	*/
 	
 	if(found_pte != NULL)
 	{
@@ -180,7 +170,6 @@ page_fault (struct intr_frame *f)
 			load_mmap(found_pte);
 			return;
 		}
-		//if(!found_pte->allocated && !(!found_pte->writable && write))
 		if(!(!found_pte->writable && write))
 		{
 			if(load_sup_pte(found_pte))

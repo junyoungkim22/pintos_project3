@@ -128,7 +128,6 @@ main (void)
 #endif
 	list_init(&frame_table);
 	lock_init(&frame_lock);
-	clock_pointer = list_begin(&frame_table);
 	swap_init();
 
   printf ("Boot complete.\n");

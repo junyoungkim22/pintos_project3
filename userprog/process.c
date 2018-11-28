@@ -179,14 +179,6 @@ process_exit (void)
 	struct open_file *of;
 	struct fte *fte_entry;
 
-	/*Allow write to executable */
-	if(lock_held_by_current_thread(&filesys_lock))
-	{
-		printf("Hell no\n");
-		lock_release(&filesys_lock);
-		shutdown_power_off();
-		//sys_exit(-1);
-	}
 	lock_acquire(&filesys_lock);
 	if(cur->exec_file != NULL)
 		file_close(cur->exec_file);
@@ -203,12 +195,6 @@ process_exit (void)
 		free(of);
 	}
 
-	if(lock_held_by_current_thread(&frame_lock))
-	{
-		printf("uh oh\n");
-		lock_release(&frame_lock);
-		shutdown_power_off();
-	}
 	lock_acquire(&frame_lock);
 	e = list_begin(&frame_table);
 	while(e != list_end(&frame_table))
@@ -218,7 +204,6 @@ process_exit (void)
 		{
 			if(fte_entry->spte->is_mmap)
 			{
-				//shutdown_power_off();
 				e = list_next(e);
 				evict(fte_entry);
 				continue;
@@ -243,12 +228,6 @@ process_exit (void)
 		e = list_next(e);
 	}
 	
-	/*
-	if(clock_pointer == NULL)
-	{
-		clock_pointer = list_begin(&frame_table);
-	}
-	*/
 	lock_release(&frame_lock);
 
   /* Destroy the current process's page directory and switch back
@@ -471,7 +450,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   success = true;
 	setup_stack_args(file_name, esp);
-	//hex_dump(*esp, *esp, 200, true);
 
  done:
   /* We arrive here whether the load is successful or not. */

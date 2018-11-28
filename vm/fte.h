@@ -5,8 +5,6 @@
 #include "vm/swap.h"
 
 struct list frame_table;
-struct list_elem *clock_pointer;
-//struct lock frame_lock;
 
 struct fte
 {
@@ -23,3 +21,4 @@ bool load_sup_pte(struct sup_pte*);
 bool load_mmap(struct sup_pte*);
 struct fte *fte_to_evict(void);
 struct fte* fte_search(void *vaddr);
+void *get_frame(enum palloc_flags flag);

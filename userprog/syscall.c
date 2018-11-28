@@ -62,7 +62,6 @@ bool sys_mmap(struct intr_frame *f)
 	}
 	lock_acquire(&filesys_lock);
 	is_page_overlap = page_overlap(map_vaddr, file_length(open_file->file));
-	//if(map_vaddr < USER_STACK_LIMIT || stack_overlap)
 
 	if(is_page_overlap || stack_overlap || map_vaddr == NULL)
 	{
@@ -93,7 +92,6 @@ bool sys_mmap(struct intr_frame *f)
 			new_mmap_info->size = file_size;
 		file_size -= new_mmap_info->size;
 
-		//new_mmap_info->mmap_file = open_file->file;
 		new_mmap_info->mmap_file = mmap_file;
 		new_mmap_info->mapid = thread_current()->mapid_counter;
 		new_mmap_info->spte = new_spte;
@@ -111,7 +109,6 @@ bool page_overlap(void *vaddr, size_t size)
 	{
 		if(get_sup_pte(p) != NULL)
 		{
-			//sys_exit(-1);
 			return true;
 		}
 	}
