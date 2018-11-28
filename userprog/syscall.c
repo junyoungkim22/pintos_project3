@@ -135,6 +135,8 @@ void sys_munmap(int mapid)
 				mmap_fte = fte_search(pg_round_down(minfo->spte->vaddr));
 				if(mmap_fte == NULL)
 				{
+					printf("no mmap fte\n");
+					shutdown_power_off();
 				}
 				evict(mmap_fte);
 			}
@@ -398,8 +400,6 @@ static bool is_valid_vaddr(const void *va, struct intr_frame *f)
 		return false;
 	}
 	load_sup_pte(found_pte);
-	//found_pte->can_evict = false;
-	found_pte->access_time = timer_ticks();
 	return true;
 }
 

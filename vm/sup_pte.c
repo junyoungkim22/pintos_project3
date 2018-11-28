@@ -13,3 +13,13 @@ bool sup_pte_less(const struct hash_elem *elem1, const struct hash_elem *elem2, 
 
 	return p1->vaddr < p2->vaddr;
 }
+
+void
+sup_pte_free(struct hash_elem *elem, void* aux UNUSED)
+{
+	struct sup_pte *spte = hash_entry(elem, struct sup_pte, hash_elem);
+	if(!spte->allocated && !spte->is_mmap)
+	{
+		block_reset(spte->disk_index);		
+	}
+}

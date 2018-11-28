@@ -180,6 +180,13 @@ process_exit (void)
 	struct fte *fte_entry;
 
 	/*Allow write to executable */
+	if(lock_held_by_current_thread(&filesys_lock))
+	{
+		printf("Hell no\n");
+		lock_release(&filesys_lock);
+		shutdown_power_off();
+		//sys_exit(-1);
+	}
 	lock_acquire(&filesys_lock);
 	if(cur->exec_file != NULL)
 		file_close(cur->exec_file);
@@ -200,6 +207,7 @@ process_exit (void)
 	{
 		printf("uh oh\n");
 		lock_release(&frame_lock);
+		shutdown_power_off();
 	}
 	lock_acquire(&frame_lock);
 	e = list_begin(&frame_table);
@@ -218,7 +226,10 @@ process_exit (void)
 			if(fte_entry->spte->allocated == true)
 			{
 				e = list_next(e);
+				pagedir_clear_page(fte_entry->owner->pagedir, fte_entry->spte->vaddr);
+				palloc_free_page(fte_entry->frame);
 				list_remove(&fte_entry->ft_elem);
+				free(fte_entry);
 				continue;
 			}
 			else

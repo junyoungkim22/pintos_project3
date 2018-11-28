@@ -305,7 +305,7 @@ thread_exit (void)
 	}
 	sema_up(&thread_current()->exit_sema);
 	sema_down(&thread_current()->exit_sema2);
-	hash_destroy(&thread_current()->sup_page_table, NULL);
+	hash_destroy(&thread_current()->sup_page_table, sup_pte_free);
 #endif
 
   /* Remove thread from all threads list, set our status to dying,

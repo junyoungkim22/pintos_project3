@@ -24,3 +24,4 @@ struct sup_pte
 
 unsigned sup_pte_hash(const struct hash_elem *elem, void *aux UNUSED);
 bool sup_pte_less(const struct hash_elem *elem1, const struct hash_elem *elem2, void *aux UNUSED);
+void sup_pte_free(struct hash_elem*, void*);

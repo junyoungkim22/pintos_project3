@@ -175,17 +175,19 @@ page_fault (struct intr_frame *f)
 	
 	if(found_pte != NULL)
 	{
-		found_pte->access_time = timer_ticks();
 		if(found_pte->is_mmap)
 		{
 			load_mmap(found_pte);
 			return;
 		}
-		if(!found_pte->allocated && !(!found_pte->writable && write))
+		//if(!found_pte->allocated && !(!found_pte->writable && write))
+		if(!(!found_pte->writable && write))
 		{
-			load_sup_pte(found_pte);
-			found_pte->can_evict = true;
-			return;
+			if(load_sup_pte(found_pte))
+			{
+				found_pte->can_evict = true;
+				return;
+			}
 		}
 	}	
 	else if(is_valid_stack_addr && is_user_vaddr(fault_addr) && fault_addr > USER_STACK_LIMIT)
