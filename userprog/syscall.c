@@ -37,7 +37,6 @@ bool sys_mmap(struct intr_frame *f)
 	struct mmap_info *new_mmap_info;
 	struct sup_pte *new_spte;
 	struct file *mmap_file;
-	bool stack_overlap;
 	bool is_page_overlap;
 	size_t file_index;
 	size_t file_size;
@@ -63,7 +62,7 @@ bool sys_mmap(struct intr_frame *f)
 	lock_acquire(&filesys_lock);
 	is_page_overlap = page_overlap(map_vaddr, file_length(open_file->file));
 
-	if(is_page_overlap || stack_overlap || map_vaddr == NULL)
+	if(is_page_overlap || map_vaddr == NULL)
 	{
 		lock_release(&filesys_lock);
 		return false;
